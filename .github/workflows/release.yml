@@ -1,11 +1,16 @@
-# 发布新版本：推一个 v 开头的标签（比如 v1.0.0），就在 Windows 上打包安装程序，发到 GitHub 的 Releases。
-# 也可以在 Actions 页面手动运行（不发布，只把安装程序放在这次运行的附件里，用来试打包）。
+# 发布新版本：推一个 v 开头的标签（比如 v1.0.0），或者在 Actions 页面手动运行并填上版本号（比如 1.0.0，会自动建 v1.0.0 标签），
+# 就在 Windows 上打包安装程序，发到 GitHub 的 Releases。手动运行时版本号留空：只试打包，安装程序放在这次运行的附件里，不发布。
 name: 发布安装程序
 
 on:
   push:
     tags: ["v*"]
   workflow_dispatch:
+    inputs:
+      version:
+        description: "要发布的版本号（比如 1.0.0）；留空只试打包，不发布"
+        required: false
+        default: ""
 
 permissions:
   contents: write
@@ -20,8 +25,10 @@ jobs:
         id: ver
         shell: pwsh
         run: |
-          $v = if ("${{ github.ref_type }}" -eq "tag") { "${{ github.ref_name }}" -replace '^v', '' } else { "0.0.0" }
+          $tag = if ("${{ github.ref_type }}" -eq "tag") { "${{ github.ref_name }}" } elseif ("${{ inputs.version }}") { "v" + ("${{ inputs.version }}" -replace '^v', '') } else { "" }
+          $v = if ($tag) { $tag -replace '^v', '' } else { "0.0.0" }
           "version=$v" >> $env:GITHUB_OUTPUT
+          "tag=$tag" >> $env:GITHUB_OUTPUT
           $json = @{ version = $v; repo = "${{ github.repository }}" } | ConvertTo-Json -Compress
           [IO.File]::WriteAllText("tools/version.json", $json + "`n")
           Get-Content tools/version.json
@@ -54,9 +61,12 @@ jobs:
           Get-ChildItem dist
 
       - name: 发布到 Releases
-        if: github.ref_type == 'tag'
+        if: steps.ver.outputs.tag != ''
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ steps.ver.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          name: 密码本 ${{ steps.ver.outputs.tag }}
           files: dist/*.exe
           body: |
             ## 安装
@@ -70,8 +80,8 @@ jobs:
 
             详细说明见仓库首页的 README。
 
-      - name: 手动运行时，把安装程序放在这次运行的附件里
-        if: github.ref_type != 'tag'
+      - name: 只试打包时，把安装程序放在这次运行的附件里
+        if: steps.ver.outputs.tag == ''
         uses: actions/upload-artifact@v4
         with:
           name: mimaben-setup

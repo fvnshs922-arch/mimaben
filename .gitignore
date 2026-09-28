@@ -1,0 +1,27 @@
+# 真实账号密码和照片只留在本机，永不上传
+私密原件/
+
+# 以防万一，任何图片和文档都不上传
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.bmp
+*.webp
+*.heic
+*.pdf
+*.doc
+*.docx
+*.xls
+*.xlsx
+*.csv
+
+__pycache__/
+
+# README 里的截图（只用假数据拍）可以上传，别处的图片照样不上传
+!docs/图片/*.png
+
+# 打包安装程序时生成的（只在 GitHub Actions 里）
+/build/
+/dist/
+/installer/ChineseSimplified.isl

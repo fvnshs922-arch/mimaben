@@ -1,0 +1,78 @@
+# 发布新版本：推一个 v 开头的标签（比如 v1.0.0），就在 Windows 上打包安装程序，发到 GitHub 的 Releases。
+# 也可以在 Actions 页面手动运行（不发布，只把安装程序放在这次运行的附件里，用来试打包）。
+name: 发布安装程序
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 版本号写进 tools/version.json（安装版靠它检查新版本）
+        id: ver
+        shell: pwsh
+        run: |
+          $v = if ("${{ github.ref_type }}" -eq "tag") { "${{ github.ref_name }}" -replace '^v', '' } else { "0.0.0" }
+          "version=$v" >> $env:GITHUB_OUTPUT
+          $json = @{ version = $v; repo = "${{ github.repository }}" } | ConvertTo-Json -Compress
+          [IO.File]::WriteAllText("tools/version.json", $json + "`n")
+          Get-Content tools/version.json
+
+      - name: 准备自带的 Python 和 pywebview
+        shell: pwsh
+        run: |
+          nuget install python -Version 3.12.10 -OutputDirectory build -ExcludeVersion -NonInteractive
+          Move-Item build/python/tools build/py
+          if (-not (Test-Path build/py/pythonw.exe)) { throw "自带的 Python 里没有 pythonw.exe（快捷方式要用它开窗口）" }
+          build/py/python.exe -m ensurepip --upgrade
+          build/py/python.exe -m pip install --disable-pip-version-check --no-warn-script-location pywebview
+          # 检查一下：窗口组件和程序自己的模块都能导入
+          build/py/python.exe -X utf8 -c "import webview, sys; sys.path.insert(0, 'tools'); import app, icons, importer, sanitize, check_staged; print('ok', webview.__name__, sys.version)"
+
+      - name: 安装 Inno Setup，准备简体中文语言文件
+        shell: pwsh
+        run: |
+          choco install innosetup -y --no-progress
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6"
+          $own = Join-Path $iscc "Languages\ChineseSimplified.isl"
+          if (Test-Path $own) { Copy-Item $own installer/ChineseSimplified.isl }
+          else { Invoke-WebRequest "https://raw.githubusercontent.com/jrsoftware/issrc/is-6_4_3/Files/Languages/Unofficial/ChineseSimplified.isl" -OutFile installer/ChineseSimplified.isl }
+
+      - name: 打包安装程序
+        shell: pwsh
+        run: |
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "/DAppVersion=${{ steps.ver.outputs.version }}" installer\mimaben.iss
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          Get-ChildItem dist
+
+      - name: 发布到 Releases
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.exe
+          body: |
+            ## 安装
+            下载下面的 `mimaben-setup-${{ steps.ver.outputs.version }}.exe`，双击安装（装到你自己的用户目录，不用管理员权限，自带 Python，不用另外装）。
+            装好后从开始菜单或桌面打开「密码本」。
+
+            - 账号密码只保存在这台电脑上（安装目录里的「私密原件」文件夹），请自己另外备份这个文件夹。
+            - 升级：下载新版本的安装程序，装到原来的位置就行，记录不会动。程序里「检查更新」会提示有没有新版本。
+            - 卸载不会删掉「私密原件」。
+            - Windows 可能提示「未知发布者」：点「更多信息」→「仍要运行」。
+
+            详细说明见仓库首页的 README。
+
+      - name: 手动运行时，把安装程序放在这次运行的附件里
+        if: github.ref_type != 'tag'
+        uses: actions/upload-artifact@v4
+        with:
+          name: mimaben-setup
+          path: dist/*.exe

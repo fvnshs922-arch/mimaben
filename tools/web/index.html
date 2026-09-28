@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0c0e16">
+<title>个人密码记录</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%238b7bff'/%3E%3Cstop offset='1' stop-color='%233fd0e0'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='24' height='24' rx='6' fill='url(%23g)'/%3E%3Cpath d='M12 5l5 2v3.5c0 3.2-2.1 5.9-5 7-2.9-1.1-5-3.8-5-7V7l5-2z' fill='none' stroke='white' stroke-width='1.6'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="/fonts.css">
+<link rel="stylesheet" href="/style.css">
+<script src="/boot.js"></script>
+</head>
+<body class="booting">
+<div class="aurora" aria-hidden="true"><i></i><i></i><i></i></div>
+<div class="dots" aria-hidden="true"></div>
+
+<div id="splash"><div class="logo xl"><i data-ic="shield"></i></div></div>
+
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="logo"><i data-ic="shield"></i></div>
+      <div class="brand-text"><b>密码本</b><small>仅保存在本机</small></div>
+      <button class="icon-btn settings-btn" id="setBtn" title="设置（字体、主题）"><i data-ic="gear"></i></button>
+    </div>
+    <nav class="nav" id="nav"><div class="nav-ind"></div><div id="navList"></div></nav>
+    <button class="btn ghost add-cat" id="addCat"><i data-ic="plus"></i><span>新建分类</span></button>
+    <div class="side-bottom">
+      <button class="upd-btn" id="updBtn" title="从 GitHub 获取程序的新版本">
+        <span class="upd-ic"><i data-ic="download"></i></span>
+        <span class="upd-text">检查更新</span>
+        <small id="updSub"></small>
+      </button>
+      <button class="upload-btn" id="uploadBtn">
+        <span class="up-ic"><i data-ic="cloud"></i></span>
+        <span class="up-text"><b>上传到 GitHub</b><small id="upSub">检查中…</small></span>
+        <span class="badge" id="upBadge" hidden>0</span>
+      </button>
+      <button class="icon-btn theme-btn" id="themeBtn" title="切换深色 / 浅色"></button>
+    </div>
+  </aside>
+
+  <main id="main">
+    <header class="topbar" id="topbar">
+      <div class="heading"><h1 id="viewTitle">全部记录</h1><p id="viewSub">&nbsp;</p></div>
+      <div class="seg layout-seg" id="layoutSeg" role="group" aria-label="显示方式">
+        <button data-l="grid" title="卡片（快捷键 G 切换）"><i data-ic="grid"></i><span>卡片</span></button>
+        <button data-l="graph" title="关系图：卡片可以拖动、缩放、连线（快捷键 G 切换）"><i data-ic="graph"></i><span>关系图</span></button>
+      </div>
+      <label class="search" id="searchBox">
+        <i data-ic="search"></i>
+        <input id="search" placeholder="搜索网站、账号、备注…" autocomplete="off" spellcheck="false">
+        <kbd>Ctrl K</kbd>
+      </label>
+      <button class="btn ghost" id="revealAllBtn" title="显示 / 隐藏当前页所有密码（快捷键 H）"></button>
+      <button class="btn ghost" id="importBtn" title="把 txt 里记的账号密码自动识别导入"><i data-ic="upload"></i><span>导入 txt</span></button>
+      <button class="btn primary" id="newBtn" title="快捷键 N"></button>
+    </header>
+    <section class="grid" id="grid"></section>
+    <section class="map" id="map" aria-label="关系图">
+      <div class="map-world" id="mapWorld">
+        <svg class="map-links" id="mapLinks" aria-hidden="true"></svg>
+        <div class="map-labels" id="mapLabels"></div>
+        <div class="map-nodes" id="mapNodes"></div>
+      </div>
+      <div class="map-focus" id="mapFocus" hidden><i data-ic="eye"></i><span id="mapFocusText"></span><button class="btn ghost sm" id="mapFocusBtn"></button></div>
+      <div class="map-tip" id="mapTip" hidden>
+        <span class="tip-dot"></span>
+        <span>按住卡片右边的<b>小圆点</b>，拖到另一张卡片上就能连线；拖右上角的<b>把手</b>放大缩小这张卡片。滚轮缩放，拖空白处移动，双击卡片编辑。</span>
+        <button class="icon-btn" data-x title="知道了"><i data-ic="x"></i></button>
+      </div>
+      <div class="map-tools">
+        <button class="icon-btn" data-z="out" title="缩小（-）"><i data-ic="minus"></i></button>
+        <button class="map-zoom" id="mapZoom" data-z="1" title="恢复 100%">100%</button>
+        <button class="icon-btn" data-z="in" title="放大（+）"><i data-ic="plus"></i></button>
+        <i class="sep"></i>
+        <button class="icon-btn" data-z="fit" title="显示全部（0）"><i data-ic="fit"></i></button>
+        <button class="icon-btn" data-z="layout" title="自动排列"><i data-ic="wand"></i></button>
+        <i class="sep"></i>
+        <button class="map-chip" id="mapIconBtn" data-z="size" title="关系图里的图标大小（快捷键 [ 缩小、] 放大）"><i data-ic="image"></i><span id="mapIconV">图标</span></button>
+        <button class="map-chip" id="mapAuto" data-z="auto" title="相同邮箱、手机号、账号的记录自动用虚线连在一起"><i data-ic="link"></i><span>自动关联</span></button>
+        <button class="map-chip" data-z="link" title="按卡片里相同的邮箱、手机号、账号自动连线，并按连线补全卡片"><i data-ic="sparkle"></i><span>一键连线</span></button>
+        <button class="map-chip" data-z="tidy" title="按连线把卡片分组，每组一块区域，各组围成一圈摆开（可以撤销）"><i data-ic="graph"></i><span>自动理图</span></button>
+      </div>
+      <div class="map-size-pop" id="mapSizePop" hidden>
+        <div class="size-top"><span>关系图里的图标大小</span><b id="mapSizeV"></b><button class="btn ghost sm" data-ms="reset">恢复默认</button></div>
+        <div class="size-bar"><button class="icon-btn" data-ms="-10" title="缩小"><i data-ic="minus"></i></button>
+          <input type="range" id="mapSizeIn" min="50" max="300" step="5">
+          <button class="icon-btn" data-ms="10" title="放大"><i data-ic="plus"></i></button></div>
+        <small>只改关系图，卡片视图不变；快捷键 <kbd>[</kbd> <kbd>]</kbd></small>
+      </div>
+      <div class="map-size-pop tidy-pop" id="mapTidyPop" hidden>
+        <div class="size-top"><span>自动理图</span></div>
+        <div class="tidy-row"><span>卡片之间的距离</span>
+          <div class="seg" id="tidyGapSeg"><button data-tg="s">小</button><button data-tg="m">中</button><button data-tg="l">大</button></div></div>
+        <div class="tidy-go">
+          <button class="btn ghost" data-tidy="pack"><i data-ic="fit"></i>团在一块</button>
+          <button class="btn primary" data-tidy="spread"><i data-ic="graph"></i>分开摆</button>
+        </div>
+        <small>互相连得多的卡片分成一组，每组一块淡色区域，各组围成一圈；连线最多的那组在中间。分开摆时圈更大，跟中间连得少的组再靠外一点。都可以撤销</small>
+      </div>
+      <svg class="map-mini" id="mapMini" aria-label="小地图，点一下跳过去"></svg>
+    </section>
+    <div class="empty" id="empty" hidden></div>
+  </main>
+</div>
+
+<div class="scrim" id="scrim"></div>
+
+<aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="dTitle">
+  <div class="drawer-head">
+    <div class="av-wrap">
+      <button class="avatar lg" id="dAvatar" title="更换图标和颜色" aria-haspopup="dialog">?</button>
+      <span class="av-badge" aria-hidden="true"><i data-ic="palette"></i></span>
+    </div>
+    <div class="drawer-title">
+      <small id="dHeading">新增记录</small>
+      <input id="dTitle" placeholder="网站或应用名称" maxlength="60" autocomplete="off" spellcheck="false">
+      <div class="cat-pick"><i data-ic="folder"></i><select id="dCat"></select></div>
+    </div>
+    <button class="icon-btn" id="dClose" title="关闭（Esc）"><i data-ic="x"></i></button>
+  </div>
+  <div class="drawer-body" id="dBody">
+    <div class="fields" id="dFields"></div>
+    <div class="add-field">
+      <div class="add-title">添加字段</div>
+      <div class="chips" id="dChips"></div>
+    </div>
+    <div class="hint"><i data-ic="lock"></i><span>所有字段都只保存在本机，上传 GitHub 时一律清空，只上传网站名称和字段名。</span></div>
+  </div>
+  <div class="drawer-foot">
+    <button class="btn danger-ghost" id="dDelete"><i data-ic="trash"></i>删除</button>
+    <span class="grow"></span>
+    <button class="btn ghost" id="dCancel">取消</button>
+    <button class="btn primary" id="dSave"><i data-ic="check"></i>保存<kbd>Ctrl S</kbd></button>
+  </div>
+</aside>
+
+<div class="gen" id="gen" hidden>
+  <div class="gen-out"><code id="genOut"></code><button class="icon-btn" id="genRe" title="换一个"><i data-ic="refresh"></i></button></div>
+  <div class="gen-row"><span>长度</span><input type="range" id="genLen" min="8" max="40" value="16"><b id="genLenV">16</b></div>
+  <div class="gen-opts">
+    <label class="tog"><input type="checkbox" data-k="upper" checked><span>A-Z</span></label>
+    <label class="tog"><input type="checkbox" data-k="lower" checked><span>a-z</span></label>
+    <label class="tog"><input type="checkbox" data-k="digit" checked><span>0-9</span></label>
+    <label class="tog"><input type="checkbox" data-k="sym" checked><span>!@#</span></label>
+  </div>
+  <button class="btn primary block" id="genUse"><i data-ic="check"></i>使用这个密码</button>
+</div>
+
+<div class="icp" id="icp" role="dialog" aria-label="图标和颜色" hidden>
+  <div class="icp-tabs" id="icpTabs">
+    <i class="icp-ind"></i>
+    <button data-mode="letter">首字母</button>
+    <button data-mode="text">Emoji / 文字</button>
+    <button data-mode="image">图片</button>
+  </div>
+  <div class="icp-pane" data-pane="letter"><p class="icp-tip">用名称的第一个字，比如「QQ」显示为 Q。</p></div>
+  <div class="icp-pane" data-pane="text">
+    <input id="icpText" class="icp-input" placeholder="输入 emoji 或 1~2 个字" autocomplete="off" spellcheck="false">
+    <div class="emoji-grid" id="icpEmoji"></div>
+    <p class="icp-tip">按 <kbd>Win</kbd> + <kbd>.</kbd> 可以打开系统 emoji 面板</p>
+  </div>
+  <div class="icp-pane" data-pane="image">
+    <div class="icp-actions">
+      <button class="btn ghost sm" id="icpFile"><i data-ic="upload"></i>本地图片</button>
+      <button class="btn ghost sm" id="icpSearch"><i data-ic="search"></i>联网查找</button>
+    </div>
+    <div class="icp-results" id="icpResults"></div>
+    <p class="icp-tip" id="icpNote">也可以把图片拖进来，或者 Ctrl V 粘贴。联网查找会把名称和网址发给该网站、App Store、Simple Icons、Google 等图标服务，账号密码不会发出。</p>
+  </div>
+  <div class="icp-label">颜色</div>
+  <div class="swatches" id="icpSwatches"></div>
+  <div class="icp-foot">
+    <button class="btn ghost sm" id="icpReset"><i data-ic="refresh"></i>恢复默认</button>
+    <span class="grow"></span>
+    <button class="btn primary sm" id="icpDone"><i data-ic="check"></i>完成</button>
+  </div>
+</div>
+
+<div class="drop" id="drop">
+  <svg class="drop-border" aria-hidden="true"><rect x="1" y="1" rx="22" ry="22"></rect></svg>
+  <div class="drop-inner"><div class="drop-ic"><i data-ic="upload"></i></div><b>松开，导入 txt</b><span>自动识别里面的账号密码，确认后再保存</span></div>
+</div>
+
+<div id="toasts"></div>
+<input type="file" id="iconIn" accept="image/*,.ico,.svg" hidden>
+<script src="/app.js"></script>
+<script src="/map.js"></script>
+</body>
+</html>
